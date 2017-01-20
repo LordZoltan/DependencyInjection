@@ -3,9 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Reflection;
 
 namespace Microsoft.Extensions.DependencyInjection.ServiceLookup
 {
@@ -18,23 +15,11 @@ namespace Microsoft.Extensions.DependencyInjection.ServiceLookup
             get { return ServiceLifetime.Scoped; }
         }
 
+        public Type ServiceType => typeof(IServiceScopeFactory);
+
         public IServiceCallSite CreateCallSite(ServiceProvider provider, ISet<Type> callSiteChain)
         {
             return this;
-        }
-
-        public object Invoke(ServiceProvider provider)
-        {
-            return new ServiceScopeFactory(provider);
-        }
-
-        public Expression Build(Expression provider)
-        {
-            return Expression.New(
-                typeof(ServiceScopeFactory).GetTypeInfo()
-                    .DeclaredConstructors
-                    .Single(),
-                provider);
         }
     }
 }

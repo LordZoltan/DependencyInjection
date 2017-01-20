@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq.Expressions;
 
 namespace Microsoft.Extensions.DependencyInjection.ServiceLookup
 {
@@ -13,22 +12,14 @@ namespace Microsoft.Extensions.DependencyInjection.ServiceLookup
 
         public ServiceLifetime Lifetime
         {
-            get { return ServiceLifetime.Scoped; }
+            get { return ServiceLifetime.Transient; }
         }
+
+        public Type ServiceType => typeof(IServiceProvider);
 
         public IServiceCallSite CreateCallSite(ServiceProvider provider, ISet<Type> callSiteChain)
         {
             return this;
-        }
-
-        public object Invoke(ServiceProvider provider)
-        {
-            return provider;
-        }
-
-        public Expression Build(Expression provider)
-        {
-            return provider;
         }
     }
 }

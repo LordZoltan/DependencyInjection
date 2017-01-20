@@ -7,13 +7,14 @@ using System.Collections.Generic;
 using System.Linq.Expressions;
 using Microsoft.Extensions.DependencyInjection.ServiceLookup;
 using Microsoft.Extensions.DependencyInjection.Specification.Fakes;
-using Microsoft.Extensions.DependencyInjection.Tests.Fakes;
 using Xunit;
 
 namespace Microsoft.Extensions.DependencyInjection.Tests
 {
     public class CallSiteTests
     {
+        private static readonly CallSiteRuntimeResolver CallSiteRuntimeResolver = new CallSiteRuntimeResolver();
+
         public static IEnumerable<object[]> TestServiceDescriptors(ServiceLifetime lifetime)
         {
             Func<object, object, bool> compare;
@@ -39,8 +40,8 @@ namespace Microsoft.Extensions.DependencyInjection.Tests
             // Closed Generic Descriptor
             yield return new object[]
             {
-                new[] { new ServiceDescriptor(typeof(IFakeOpenGenericService<string>), typeof(FakeService), lifetime) },
-                typeof(IFakeOpenGenericService<string>),
+                new[] { new ServiceDescriptor(typeof(IFakeOpenGenericService<PocoClass>), typeof(FakeService), lifetime) },
+                typeof(IFakeOpenGenericService<PocoClass>),
                 compare,
             };
             // Open Generic Descriptor
@@ -79,9 +80,9 @@ namespace Microsoft.Extensions.DependencyInjection.Tests
         [MemberData(nameof(TestServiceDescriptors), ServiceLifetime.Scoped)]
         [MemberData(nameof(TestServiceDescriptors), ServiceLifetime.Transient)]
         public void BuiltExpressionWillReturnResolvedServiceWhenAppropriate(
-            ServiceDescriptor[] desciptors, Type serviceType, Func<object, object, bool> compare)
+            ServiceDescriptor[] descriptors, Type serviceType, Func<object, object, bool> compare)
         {
-            var provider = new ServiceProvider(desciptors);
+            var provider = new ServiceProvider(descriptors, validateScopes: true);
 
             var callSite = provider.GetServiceCallSite(serviceType, new HashSet<Type>());
             var collectionCallSite = provider.GetServiceCallSite(typeof(IEnumerable<>).MakeGenericType(serviceType), new HashSet<Type>());
@@ -89,7 +90,7 @@ namespace Microsoft.Extensions.DependencyInjection.Tests
             var compiledCallSite = CompileCallSite(callSite);
             var compiledCollectionCallSite = CompileCallSite(collectionCallSite);
 
-            var service1 = callSite.Invoke(provider);
+            var service1 = Invoke(callSite, provider);
             var service2 = compiledCallSite(provider);
             var serviceEnumerator = ((IEnumerable)compiledCollectionCallSite(provider)).GetEnumerator();
 
@@ -110,14 +111,14 @@ namespace Microsoft.Extensions.DependencyInjection.Tests
             descriptors.AddScoped<ServiceB>();
             descriptors.AddScoped<ServiceC>();
 
-            var provider = new ServiceProvider(descriptors);
+            var provider = new ServiceProvider(descriptors, validateScopes: true);
             var callSite = provider.GetServiceCallSite(typeof(ServiceC), new HashSet<Type>());
             var compiledCallSite = CompileCallSite(callSite);
 
             var serviceC = (ServiceC)compiledCallSite(provider);
 
             Assert.NotNull(serviceC.ServiceB.ServiceA);
-            Assert.Equal(serviceC, callSite.Invoke(provider));
+            Assert.Equal(serviceC, Invoke(callSite, provider));
         }
 
         [Fact]
@@ -128,7 +129,7 @@ namespace Microsoft.Extensions.DependencyInjection.Tests
             descriptors.AddTransient<ClassWithThrowingCtor>();
             descriptors.AddTransient<IFakeService, FakeService>();
 
-            var provider = new ServiceProvider(descriptors);
+            var provider = new ServiceProvider(descriptors, validateScopes: true);
 
             var callSite1 = provider.GetServiceCallSite(typeof(ClassWithThrowingEmptyCtor), new HashSet<Type>());
             var compiledCallSite1 = CompileCallSite(callSite1);
@@ -167,15 +168,14 @@ namespace Microsoft.Extensions.DependencyInjection.Tests
             public ServiceB ServiceB { get; set; }
         }
 
+        private static object Invoke(IServiceCallSite callSite, ServiceProvider provider)
+        {
+            return CallSiteRuntimeResolver.Resolve(callSite, provider);
+        }
+
         private static Func<ServiceProvider, object> CompileCallSite(IServiceCallSite callSite)
         {
-            var providerExpression = Expression.Parameter(typeof(ServiceProvider), "provider");
-
-            var lambdaExpression = Expression.Lambda<Func<ServiceProvider, object>>(
-                callSite.Build(providerExpression),
-                providerExpression);
-
-            return lambdaExpression.Compile();
+            return new CallSiteExpressionBuilder(CallSiteRuntimeResolver).Build(callSite);
         }
     }
 }

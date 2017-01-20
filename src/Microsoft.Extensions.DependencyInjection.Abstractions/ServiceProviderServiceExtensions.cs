@@ -10,7 +10,7 @@ namespace Microsoft.Extensions.DependencyInjection
     /// <summary>
     /// Extension methods for getting services from an <see cref="IServiceProvider" />.
     /// </summary>
-    public static class ServiceProviderExtensions
+    public static class ServiceProviderServiceExtensions
     {
         /// <summary>
         /// Get service of type <typeparamref name="T"/> from the <see cref="IServiceProvider"/>.
@@ -47,8 +47,13 @@ namespace Microsoft.Extensions.DependencyInjection
                 throw new ArgumentNullException(nameof(serviceType));
             }
 
-            var service = provider.GetService(serviceType);
+            var requiredServiceSupportingProvider = provider as ISupportRequiredService;
+            if (requiredServiceSupportingProvider != null)
+            {
+                return requiredServiceSupportingProvider.GetRequiredService(serviceType);
+            }
 
+            var service = provider.GetService(serviceType);
             if (service == null)
             {
                 throw new InvalidOperationException(Resources.FormatNoServiceRegistered(serviceType));
@@ -110,6 +115,16 @@ namespace Microsoft.Extensions.DependencyInjection
 
             var genericEnumerable = typeof(IEnumerable<>).MakeGenericType(serviceType);
             return (IEnumerable<object>)provider.GetRequiredService(genericEnumerable);
+        }
+
+        /// <summary>
+        /// Creates a new <see cref="IServiceScope"/> that can be used to resolve scoped services.
+        /// </summary>
+        /// <param name="provider">The <see cref="IServiceProvider"/> to create the scope from.</param>
+        /// <returns>A <see cref="IServiceScope"/> that can be used to resolve scoped services.</returns>
+        public static IServiceScope CreateScope(this IServiceProvider provider)
+        {
+            return provider.GetRequiredService<IServiceScopeFactory>().CreateScope();
         }
     }
 }

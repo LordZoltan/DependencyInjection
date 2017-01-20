@@ -1,26 +1,31 @@
 {
-  "version": "1.0.0-*",
-  "description": "Dependency injection abstraction and fallback implementation.",
-  "repository": {
-    "type": "git",
-    "url": "git://github.com/aspnet/dependencyinjection"
+  "version": "1.2.0-*",
+  "description": "Default implementation of dependency injection for Microsoft.Extensions.DependencyInjection.",
+  "packOptions": {
+    "repository": {
+      "type": "git",
+      "url": "git://github.com/aspnet/dependencyinjection"
+    },
+    "tags": [
+      "dependencyinjection",
+      "di"
+    ]
   },
-  "compilationOptions": {
+  "buildOptions": {
     "warningsAsErrors": true,
-    "keyFile": "../../tools/Key.snk"
+    "keyFile": "../../tools/Key.snk",
+    "nowarn": [
+      "CS1591"
+    ],
+    "xmlDoc": true
   },
   "dependencies": {
-    "Microsoft.Extensions.DependencyInjection.Abstractions": "1.0.0-*"
+    "Microsoft.Extensions.DependencyInjection.Abstractions": {
+      "target": "project"
+    },
+    "NETStandard.Library": "1.6.2-*"
   },
   "frameworks": {
-    "net451": {},
-    "dotnet5.4": {
-      "dependencies": {
-        "System.Collections": "4.0.11-*",
-        "System.Collections.Concurrent": "4.0.11-*",
-        "System.Threading": "4.0.11-*",
-        "System.Threading.Tasks": "4.0.11-*"
-      }
-    }
+    "netstandard1.1": {}
   }
 }
